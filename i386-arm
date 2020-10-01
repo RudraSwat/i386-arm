@@ -91,7 +91,7 @@ EOF
 # Create program for launching environment
 cat <<EOF > /usr/bin/i386
 #!/bin/bash
-sudo -p 'Please type your password and pres ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash
+sudo -p 'Please type your password and press ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash
 EOF
 chmod 755 /usr/bin/i386
 
