@@ -1,11 +1,20 @@
 # i386-arm
-Set up a Debian i386 environment on an ARM computer/SBC.
+Set up an emulated Debian i386 (Stretch, Buster doesn't work at the moment with emulation) environment on an ARM computer/SBC. Requires Debian or one of its derivatives like Ubuntu, Kali Linux etc.
+
+## Tested derivatives of Debian
+
+1. Raspbian Buster
+2. Ubuntu Server 20.04
+
+## Untested derivatives of Debian (might work)
+
+1. Kali Linux
 
 ## Tested hardware
 
 1. Raspberry Pi 4B
 
-## Might work
+## Untested hardware (might work)
 
 1. A Mac computer using Apple Silicon with an ARM Debian VM running on it.
 
