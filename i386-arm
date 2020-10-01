@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Exit on errors
+set -e
+
+# Default Debian version (buster and sid don't work at the moment, hence using strech)
+DEF_VER=stretch
+
+# Check if root
+[[ ! $(id -u) -eq 0 ]] && { echo 'Requires root. Exiting...' && exit 1; }
+
+# Prompt asking whether to proceed
+echo 'Proceed? Doing so will remove an existing i386-arm environment, if present. Press ENTER to continue, ^C to cancel.'
+read
+
+# Remove an existing i386-arm environment, if present
+umount /i386/sys/ &>/dev/null || true
+umount /i386/proc/ &>/dev/null || true
+umount /i386/dev/ &>/dev/null || true
+umount /i386/dev/pts/ &>/dev/null || true
+umount /i386/dev/shm/ &>/dev/null || true
+umount /i386/main_storage/ &>/dev/null || true
+rm -rf /i386/
+
+# Install all required dependencies
+apt-get update && apt-get install -y qemu qemu-user qemu-user-static sudo binfmt-support debootstrap binutils lxterminal
+
+# Setup Debian x86 chroot
+[[ "$1" != "" ]] && debootstrap --no-check-gpg --foreign --arch i386 "$1" /i386 http://ftp.us.debian.org/debian || debootstrap --no-check-gpg --foreign --arch i386 "$DEF_VER" /i386 http://ftp.us.debian.org/debian
+
+# Create a directory for main storage in the chroot
+mkdir -p /i386/main_storage
+
+# setup_i386
+cat <<EOF > /usr/bin/setup_i386
+#!/bin/bash
+mount -t sysfs sys /i386/sys/
+mount -t proc proc /i386/proc/
+mount --bind /dev /i386/dev/
+mount --bind /dev/pts /i386/dev/pts/
+mount --bind /dev/shm /i386/dev/shm/
+mount --bind / /i386/main_storage
+EOF
+chmod 755 /usr/bin/setup_i386
+cat <<EOF > /etc/systemd/system/setup_i386.service
+[Unit]
+Description=Service to setup i386 chroot environment
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/setup_i386
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Make setup_i386 run at boot
+systemctl enable setup_i386
+
+# Start setup_i386
+systemctl start setup_i386
+
+# Copy qemu-i386-static
+cp /usr/bin/qemu-i386-static /i386/usr/bin/qemu-i386-static
+
+# Run second stage of debootstrap
+chroot /i386/ /debootstrap/debootstrap --second-stage
+
+# Run apt-get update in the chroot
+chroot /i386/ apt-get update
+
+# Setup en_US.UTF-8 locale
+chroot /i386/ apt-get install locales -y
+sed -i "/en_US\.UTF\-8 UTF\-8/ s/# *//" /i386/etc/locale.gen
+chroot /i386/ locale-gen
+chroot /i386/ update-locale LANG=en_US.UTF-8
+
+# Create desktop file for launching environment
+mkdir -p /usr/share/applications/
+cat <<EOF > /usr/share/applications/i386.desktop
+[Desktop Entry]
+Name=i386-arm - Terminal
+Type=Application
+Comment=Launch i386-arm environment
+Exec=lxterminal --title="i386-arm - Terminal" -e "sudo -p 'Please type your password and pres ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash"
+Icon=terminal
+Terminal=false
+Categories=Utility;
+EOF
+
+# Create program for launching environment
+cat <<EOF > /usr/bin/i386
+#!/bin/bash
+sudo -p 'Please type your password and pres ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash
+EOF
+chmod 755 /usr/bin/i386
+
+# Prompt for reboot
+echo 'Reboot? Required for i386-arm to work properly. Press ENTER to reboot, ^C to cancel.'
+read
+reboot
