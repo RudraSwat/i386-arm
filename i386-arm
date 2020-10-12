@@ -82,7 +82,7 @@ cat <<EOF > /usr/share/applications/i386.desktop
 Name=i386-arm - Terminal
 Type=Application
 Comment=Launch i386-arm environment
-Exec=lxterminal --title="i386-arm - Terminal" -e "sudo -p 'Please type your password and pres ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash"
+Exec=lxterminal --title="i386-arm - Terminal" -e "sudo -p 'Please type your password and press ENTER to continue (may not be visible when typing): ' chroot /i386/ /bin/bash"
 Icon=terminal
 Terminal=false
 Categories=Utility;
